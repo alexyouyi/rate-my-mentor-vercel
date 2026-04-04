@@ -109,25 +109,25 @@ export function requireEnv(key: keyof typeof env): string {
 /* ------------------------------------------------------------------ */
 
 const aiEnvSchema = z.object({
-  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY 必填'),
-  OPENAI_MODEL: z.string().default('gpt-4o'),
+  MINIMAX_API_KEY: z.string().optional(),
+  MINIMAX_MODEL: z.string().default('abab6.5s-chat'),
 });
 
 const ipfsEnvSchema = z.object({
-  PINATA_API_KEY: z.string().min(1, 'PINATA_API_KEY 必填'),
-  PINATA_API_SECRET: z.string().min(1, 'PINATA_API_SECRET 必填'),
+  PINATA_API_KEY: z.string().optional(),
+  PINATA_API_SECRET: z.string().optional(),
 });
 
 const emailEnvSchema = z.object({
-  EMAIL_HOST: z.string().min(1, 'EMAIL_HOST 必填'),
+  EMAIL_HOST: z.string().optional(),
   EMAIL_PORT: z.string().default('465'),
-  EMAIL_USER: z.string().min(1, 'EMAIL_USER 必填'),
-  EMAIL_PASS: z.string().min(1, 'EMAIL_PASS 必填'),
+  EMAIL_USER: z.string().optional(),
+  EMAIL_PASS: z.string().optional(),
   OTP_EXPIRE_MINUTES: z.string().default('10'),
 });
 
 const chainEnvSchema = z.object({
-  CONTRACT_ADDRESS: z.string().min(1, 'CONTRACT_ADDRESS 必填'),
+  CONTRACT_ADDRESS: z.string().optional(),
   CONTRACT_ABI: z
     .string()
     .default('[]')
@@ -139,12 +139,12 @@ const chainEnvSchema = z.object({
         return false;
       }
     }, 'CONTRACT_ABI 必须是合法 JSON 字符串'),
-  RPC_URL: z.string().url('RPC_URL 必须是合法 URL'),
+  RPC_URL: z.string().optional(),
   CHAIN_ID: z.string().regex(/^\d+$/, 'CHAIN_ID 必须是数字字符串').default('11155111'),
 });
 
 const encryptionEnvSchema = z.object({
-  ENCRYPTION_KEY: z.string().length(32, 'ENCRYPTION_KEY 必须正好为 32 位'),
+  ENCRYPTION_KEY: z.string().optional(),
 });
 
 /* ------------------------------------------------------------------ */

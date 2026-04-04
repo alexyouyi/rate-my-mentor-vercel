@@ -4,10 +4,17 @@ import { getEmailEnv } from './env';
 let _emailTransporter: nodemailer.Transporter | null = null;
 
 // 懒加载：只有真正调用邮件功能时才校验配置并初始化
-export function getEmailTransporter(): nodemailer.Transporter {
+export function getEmailTransporter(): nodemailer.Transporter | null {
   if (_emailTransporter) return _emailTransporter;
 
-  const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS, EMAIL_PORT } = getEmailEnv();
+  const emailEnv = getEmailEnv();
+  const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS, EMAIL_PORT } = emailEnv;
+
+  // 如果缺少必要的配置，返回 null
+  if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASS) {
+    console.warn('⚠️ 邮件配置不完整，邮件功能将被禁用');
+    return null;
+  }
 
   _emailTransporter = nodemailer.createTransport({
     host: EMAIL_HOST,
@@ -23,7 +30,19 @@ export function getEmailTransporter(): nodemailer.Transporter {
 }
 
 // 兼容旧代码导入，修复报错：has no exported member 'emailTransporter'
-export const emailTransporter = getEmailTransporter();
+// 延迟获取，如果配置不完整则为 null
+export const emailTransporter = {
+  get transporter() {
+    return getEmailTransporter();
+  },
+  async sendMail(...args: Parameters<nodemailer.Transporter['sendMail']>) {
+    const transporter = getEmailTransporter();
+    if (!transporter) {
+      throw new Error('邮件服务未配置');
+    }
+    return transporter.sendMail(...args);
+  }
+};
 
 //import nodemailer from 'nodemailer';
 //import { env } from './env';

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node dist/app.js)",
+      "Bash(findstr \"3000\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/ai/extract-review -H \"Content-Type: application/json\" -d '{\"rawContent\":\"这个导师非常好，技术扎实，讲解清晰\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/ai/extract-review -H \"Content-Type: application/json\" -d '{\"rawContent\":\"测试评论\"}')",
+      "Bash(wmic process:*)",
+      "Bash(taskkill /F /PID 10924)",
+      "Bash(taskkill //F //PID 10924)",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/ai/extract-review -H \"Content-Type: application/json\" -d '{\"rawContent\":\"导师很专业\"}')",
+      "Bash(node -e ':*)",
+      "WebSearch",
+      "WebFetch(domain:platform.minimax.io)",
+      "Bash(findstr \":3000\")",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/ai/extract-review -H \"Content-Type: application/json\" -d '{\"rawContent\":\"这个导师非常好，技术扎实，讲解清晰，耐心细致\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/ai/extract-review -H \"Content-Type: application/json\" -d '{\"rawContent\":\"The mentor is very professional and patient\"}')",
+      "Bash(curl -s http://localhost:3001)",
+      "Bash(curl -s -X POST http://localhost:3001/api/v1/ai/extract-review -H \"Content-Type: application/json\" -d '{\"rawContent\":\"这个导师很专业，讲解清楚\"}')"
+    ]
+  }
+}

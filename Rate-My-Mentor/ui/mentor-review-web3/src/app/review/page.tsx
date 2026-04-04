@@ -53,7 +53,7 @@ const REVIEW_AI_RESULT_PHASE: Phase = "review_ai_result" satisfies Phase;
 const SUBMITTED_PHASE: Phase = "submitted" satisfies Phase;
 
 const DIM_LABELS = ["成长支持", "预期清晰度", "沟通质量", "工作强度", "尊重与包容"] as const;
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:3001/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "https://www65-hackathon-test-9a1a.up.railway.app/api/v1";
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -135,15 +135,24 @@ export default function ReviewPage() {
   }
 
   function getSafeDimensionScore(index: number): number {
-    const score = aiResult?.dimensionScores?.[index]?.score;
-    if (typeof score === "number" && score >= 1 && score <= 5) {
-      return Math.round(score);
-    }
-    return 0;
+    // 从 dimScores 获取，这是经过正确映射后的评分
+    return dimScores[index] || 0;
   }
 
   function getSafeDimensionComment(index: number): string {
-    return aiResult?.dimensionScores?.[index]?.comment ?? "";
+    // 根据前端维度名称找到AI对应的维度
+    const frontendToAIDim: Record<number, string> = {
+      0: "成长帮助",
+      1: "指导能力",
+      2: "沟通效率",
+      3: "责任心",
+      4: "专业能力",
+    };
+    const aiDimName = frontendToAIDim[index];
+    if (!aiDimName || !aiResult?.dimensionScores) return "";
+
+    const dim = aiResult.dimensionScores.find((d: { dimension: string }) => d.dimension === aiDimName);
+    return dim?.comment ?? "";
   }
 
   async function handleExtractAI() {
@@ -166,29 +175,54 @@ export default function ReviewPage() {
     setAiError(null);
     setAiResult(null);
 
-    // 模拟 AI 分析结果
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // 调用后端AI接口
+      const response = await fetch(`${API_BASE}/ai/extract-review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rawContent: reviewText.trim(),
+        }),
+      });
 
-    // 模拟正面评价的评分结果
-    const mockResult: AIReviewResult = {
-      overallScore: 4.5,
-      dimensionScores: [
-        { dimension: "成长支持", score: 4.5, comment: "评价中提及成长和学习机会" },
-        { dimension: "预期清晰度", score: 4, comment: "工作内容和目标较为明确" },
-        { dimension: "沟通质量", score: 4.5, comment: "团队沟通和反馈较为顺畅" },
-        { dimension: "工作强度", score: 4, comment: "工作节奏适中" },
-        { dimension: "尊重与包容", score: 4.5, comment: "团队氛围良好" },
-      ],
-      summary: "该企业/部门整体评价正面，团队氛围好，有较多成长机会。",
-      tags: ["团队氛围好", "成长快", "福利好"],
-      isQualified: true,
-      unqualifiedReason: "",
-    };
+      if (!response.ok) {
+        throw new Error("AI分析请求失败");
+      }
 
-    setAiResult(mockResult);
-    setOverallScore(Math.round(mockResult.overallScore));
-    setDimScores([4, 4, 4, 4, 4]);
-    setPhase("review_ai_result");
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "AI分析失败");
+      }
+
+      setAiResult(result.data);
+      setOverallScore(Math.round(result.data.overallScore));
+
+      // 将AI返回的维度评分映射到前端需要的格式
+      const dimScoresMap: Record<string, number> = {};
+      if (result.data.dimensionScores) {
+        result.data.dimensionScores.forEach((dim: { dimension: string; score: number }) => {
+          dimScoresMap[dim.dimension] = dim.score;
+        });
+      }
+
+      // 映射维度评分
+      const mappedDimScores: [number, number, number, number, number] = [
+        dimScoresMap["成长帮助"] ?? dimScoresMap["成长支持"] ?? 3,
+        dimScoresMap["指导能力"] ?? dimScoresMap["预期清晰度"] ?? 3,
+        dimScoresMap["沟通效率"] ?? dimScoresMap["沟通质量"] ?? 3,
+        dimScoresMap["责任心"] ?? dimScoresMap["工作强度"] ?? 3,
+        dimScoresMap["专业能力"] ?? dimScoresMap["尊重与包容"] ?? 3,
+      ];
+
+      setDimScores(mappedDimScores);
+      setPhase("review_ai_result");
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "AI分析失败，请重试");
+      setPhase("input");
+    }
   }
 
   async function handleSubmit() {

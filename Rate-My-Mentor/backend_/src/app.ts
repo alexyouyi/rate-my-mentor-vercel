@@ -6,11 +6,12 @@ import cors from 'cors';
 import rootRouter from './routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { loggerMiddleware } from './middlewares/logger.middleware';
+import { env } from './config/env';
 
 const app = express();
 
-// 🔥 固定端口 3000
-const PORT = 3000;
+// 🔥 从环境变量读取端口
+const PORT = parseInt(env.PORT || '3000', 10);
 
 // ✅ 根路由 / （解决 404 关键！）
 app.get('/', (req, res) => {

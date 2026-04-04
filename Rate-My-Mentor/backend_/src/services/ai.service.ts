@@ -1,8 +1,52 @@
-import { getOpenAIClient } from '../config/openai';
-
-//service 不自己读 process.env，只消费已经验证过的配置。
-import { getAIEnv } from '../config/env'; //原版：import { env } from '../config/env';
+import { getMiniMaxClient } from '../config/openai';
+import { getAIEnv } from '../config/env';
 import { AIReviewResult, ReviewDimension } from '../types/review.types';
+
+/**
+ * 调用 MiniMax API 进行聊天
+ */
+async function chatWithMiniMax(prompt: string): Promise<string> {
+  const client = getMiniMaxClient();
+
+  // 检查客户端是否正确初始化
+  if (!client) {
+    throw new Error('MiniMax AI 客户端未初始化，请检查 MINIMAX_API_KEY 配置');
+  }
+
+  const aiEnv = getAIEnv();
+  const { MINIMAX_MODEL } = aiEnv;
+
+  console.log('MiniMax 请求:', { model: MINIMAX_MODEL, baseURL: client.baseURL });
+
+  const response = await fetch(`${client.baseURL}/text/chatcompletion_v2`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${client.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MINIMAX_MODEL,
+      messages: [
+        { role: 'system', content: '你是一个专业的职场评价分析专家，请严格按照用户要求返回JSON格式。' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`MiniMax API error: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('MiniMax API 返回为空');
+  }
+
+  return content;
+}
 
 export class AIService {
   // 从用户自然语言评价中提取结构化评分
@@ -35,32 +79,22 @@ export class AIService {
       }
       `;
     
-    const { OPENAI_MODEL } = getAIEnv(); //Service 不直接碰 env，只拿“已经验证过的配置对象”
+    // 使用 MiniMax API 调用 AI
+    const result = await chatWithMiniMax(prompt);
 
-    const response = await getOpenAIClient().chat.completions.create({ //Service 不负责初始化 client，只负责用
-      model: OPENAI_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    });
+    // 解析 JSON 结果
+    try {
+      // 尝试提取 JSON（可能包含在 markdown 代码块中）
+      let jsonStr = result;
+      const codeBlockMatch = result.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1];
+      }
 
-    const result = response.choices[0]?.message?.content; //原本写法风险：风险：choices 可能为空；message 可能 undefined；content 可能 null，一旦有异常结构 → 直接 crash通过。修改后把“结构异常”统一转成“业务错误”
-    if (!result) {
-      throw new Error('AI 提取失败，无返回结果');
+      return JSON.parse(jsonStr.trim()) as AIReviewResult;
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', result);
+      throw new Error('AI 返回格式解析失败');
     }
-
-    return JSON.parse(result) as AIReviewResult;
-    
-    // const response = await openaiClient.chat.completions.create({
-    //   model: env.OPENAI_MODEL,
-    //   messages: [{ role: 'user', content: prompt }],
-    //   temperature: 0.3,
-    //   response_format: { type: 'json_object' },
-    // });
-
-    // const result = response.choices[0].message.content;
-    // if (!result) throw new Error('AI提取失败，无返回结果');
-
-    // return JSON.parse(result) as AIReviewResult;
   }
 }

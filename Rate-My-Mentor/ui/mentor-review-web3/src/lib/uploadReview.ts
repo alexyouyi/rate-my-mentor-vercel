@@ -5,7 +5,7 @@ interface UploadReviewResponse {
 }
 
 export async function uploadReview(rawContent: string): Promise<UploadReviewResponse> {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:3001/api/v1";
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "https://www65-hackathon-test-9a1a.up.railway.app/api/v1";
 
   const response = await fetch(`${apiBase}/ipfs/reviews`, {
     method: "POST",

@@ -1,35 +1,36 @@
-import OpenAI from 'openai';
 import { getAIEnv } from './env';
 
-let _openaiClient: OpenAI | null = null;
+let _minimaxClient: any = null;
 
 /**
- * 获取 OpenAI Client（懒加载 + 单例）
- * - 只有在真正调用 AI 功能时才校验环境变量
- * - 全项目复用同一个实例
+ * 获取 MiniMax AI Client（懒加载 + 单例）
+ * - 使用 MiniMax API 替代 OpenAI
+ * - API 文档: https://platform.minimax.io/document/GuYd0DXz7oLmqP3P/Text/ChatCompletion/V2
  */
-export function getOpenAIClient(): OpenAI {
-  if (_openaiClient) return _openaiClient;
+export function getMiniMaxClient(): any {
+  if (_minimaxClient) return _minimaxClient;
 
-  const { OPENAI_API_KEY } = getAIEnv();
+  const aiEnv = getAIEnv();
+  const { MINIMAX_API_KEY } = aiEnv;
 
-  _openaiClient = new OpenAI({
-    apiKey: OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true
-  });
+  // 如果缺少 API Key，返回 null 或使用 mock
+  if (!MINIMAX_API_KEY) {
+    console.warn('⚠️ MINIMAX_API_KEY 未配置，AI 功能将被禁用');
+    return null;
+  }
 
-  return _openaiClient;
+  // MiniMax 使用 REST API，无需 SDK，直接返回配置对象
+  _minimaxClient = {
+    apiKey: MINIMAX_API_KEY,
+    baseURL: 'https://api.minimax.chat/v1',
+  };
+
+  return _minimaxClient;
 }
 
-// 兼容旧代码导入：openaiClient（修复你项目里的报错）
-export const openaiClient = getOpenAIClient();
-
-
-
-//import OpenAI from 'openai';
-//import { env } from './env';
-
-// 初始化OpenAI客户端，整个项目共用这一个实例
-//export const openaiClient = new OpenAI({
-//  apiKey: env.OPENAI_API_KEY,
-//});
+// 兼容旧代码导入
+export const openaiClient = {
+  get client() {
+    return getMiniMaxClient();
+  }
+};
